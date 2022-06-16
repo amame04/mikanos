@@ -1,3 +1,9 @@
+# このリポジトリについて
+[uchan-nos/mikanos](https://github.com/uchan-nos/mikanos)のForkです。
+個人的に改造をしていきます。
+
+# 追加・変更点
+
 # MikanOS
 
 MikanOS はレガシーフリーなアーキテクチャ（UEFI BIOS、Intel 64 モード）で動作する教育用オペレーティングシステムです。

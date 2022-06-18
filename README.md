@@ -1,8 +1,8 @@
 # このリポジトリについて
 [uchan-nos/mikanos](https://github.com/uchan-nos/mikanos)のForkです。
-個人的に改造をしていきます。
 
 # 追加・変更点
+PS/2マウスとキーボードに対応中です。
 
 # MikanOS
 

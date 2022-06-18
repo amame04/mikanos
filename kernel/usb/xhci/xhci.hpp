@@ -67,6 +67,6 @@ namespace usb::xhci {
   Error ProcessEvent(Controller& xhc);
 
   extern Controller* controller;
-  void Initialize();
+  int Initialize();
   void ProcessEvents();
 }

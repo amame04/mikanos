@@ -6,6 +6,8 @@
 #include "layer.hpp"
 #include "usb/classdriver/mouse.hpp"
 #include "task.hpp"
+#include "asmfunc.h"
+#include "logger.hpp"
 
 namespace {
   const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
@@ -190,4 +192,14 @@ void InitializeMouse() {
     };
 
   active_layer->SetMouseLayer(mouse_layer_id);
+}
+
+void InitializePS2Mouse() {
+  //while ((IoIn32(0x64) & 0x02) == 0);
+  for (int i = 0; i < 0b10000000; i++);
+  IoOut32(0x64, 0xd4);
+  //while ((IoIn32(0x64) & 0x02) == 0);
+  for (int i = 0; i < 0b10000000; i++);
+  IoOut32(0x60, 0xf4);
+  Log(kWarn, "mouse initialize\n");
 }

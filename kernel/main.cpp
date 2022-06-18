@@ -38,6 +38,7 @@
 #include "fat.hpp"
 #include "syscall.hpp"
 #include "uefi.hpp"
+#include "pic.hpp"
 
 __attribute__((format(printf, 1, 2))) int printk(const char* format, ...) {
   va_list ap;
@@ -185,12 +186,11 @@ extern "C" void KernelMainNewStack(
     EFI_RUNTIME_SERVICES* rt) {
   MemoryMap memory_map{memory_map_ref};
   uefi_rt = rt;
-
   InitializeGraphics(frame_buffer_config_ref);
   InitializeConsole();
 
   printk("Welcome to MikanOS!\n");
-  SetLogLevel(kWarn);
+  SetLogLevel(kDebug);
 
   InitializeSegmentation();
   InitializePaging();
@@ -206,7 +206,7 @@ extern "C" void KernelMainNewStack(
   InitializeMainWindow();
   InitializeTextWindow();
   layer_manager->Draw({{0, 0}, ScreenSize()});
-
+  
   acpi::Initialize(acpi_table);
   InitializeLAPICTimer();
 
@@ -220,9 +220,16 @@ extern "C" void KernelMainNewStack(
   InitializeTask();
   Task& main_task = task_manager->CurrentTask();
 
-  usb::xhci::Initialize();
-  InitializeKeyboard();
-  InitializeMouse();
+  InitializePIC();
+  InitializePS2Keyboard();
+  InitializePS2Mouse();
+
+
+  if (usb::xhci::Initialize() != -1) {
+    InitializeKeyboard();
+    InitializeMouse();
+  }
+
 
   app_loads = new std::map<fat::DirectoryEntry*, AppLoadInfo>;
   task_manager->NewTask()
@@ -239,6 +246,9 @@ extern "C" void KernelMainNewStack(
     __asm__("cli");
     const auto tick = timer_manager->CurrentTick();
     __asm__("sti");
+
+    //keydbg key = KeyboardEvent();
+    //Log(kDebug, "%c", key.keycode);
 
     sprintf(str, "%010lu", tick);
     FillRectangle(*main_window->InnerWriter(), {20, 4}, {8 * 10, 16}, {0xc6, 0xc6, 0xc6});
@@ -259,6 +269,15 @@ extern "C" void KernelMainNewStack(
     case Message::kInterruptXHCI:
       usb::xhci::ProcessEvents();
       break;
+    case Message::kInterruptPS2Keyboard:
+      printk("InterruptPS2\n");
+      {
+        keydbg key = KeyboardEvent();
+        if (key.keycode) {
+          printk("%c, %x\n", key.ascii, key.keycode);
+        }
+      }
+      break;
     case Message::kTimerTimeout:
       if (msg->arg.timer.value == kTextboxCursorTimer) {
         __asm__("cli");
@@ -275,8 +294,9 @@ extern "C" void KernelMainNewStack(
         if (msg->arg.keyboard.press) {
           InputTextWindow(msg->arg.keyboard.ascii);
         }
-      } else if (msg->arg.keyboard.press &&
-                 msg->arg.keyboard.keycode == 59 /* F2 */) {
+      } else if ((msg->arg.keyboard.press &&
+                 msg->arg.keyboard.keycode == 59) /* F2 */ ||
+                 msg->arg.keyboard.keycode == 0x3C) {
         task_manager->NewTask()
           .InitContext(TaskTerminal, 0)
           .Wakeup();

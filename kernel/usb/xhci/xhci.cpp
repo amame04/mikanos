@@ -560,7 +560,7 @@ namespace usb::xhci {
 
   Controller* controller;
 
-  void Initialize() {
+  int Initialize() {
     // Intel 製を優先して xHC を探す
     pci::Device* xhc_dev = nullptr;
     for (int i = 0; i < pci::num_device; ++i) {
@@ -578,7 +578,10 @@ namespace usb::xhci {
           xhc_dev->bus, xhc_dev->device, xhc_dev->function);
     } else {
       Log(kError, "xHC has not been found\n");
+      /*
       exit(1);
+      */
+      return -1;
     }
 
     const uint8_t bsp_local_apic_id =
@@ -601,7 +604,10 @@ namespace usb::xhci {
     }
     if (auto err = xhc.Initialize()) {
       Log(kError, "xhc initialize failed: %s\n", err.Name());
+      /*
       exit(1);
+      */
+      return -1;
     }
 
     Log(kInfo, "xHC starting\n");
@@ -619,6 +625,7 @@ namespace usb::xhci {
         }
       }
     }
+    return 0;
   }
 
   void ProcessEvents() {

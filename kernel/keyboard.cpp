@@ -4,6 +4,9 @@
 #include "usb/classdriver/keyboard.hpp"
 #include "task.hpp"
 
+#include "asmfunc.h"
+#include "logger.hpp"
+
 namespace {
 
 const char keycode_map[256] = {
@@ -48,6 +51,20 @@ const char keycode_map_shifted[256] = {
   0,    '|',  0,    0,    0,    0,    0,    0,   // 136
 };
 
+const char ps2_keycode_map[0x3a] = {
+  0,    0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', //0x0
+  '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', // 0xF
+  0,    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 0,   0, // 0x1D
+  '|',  'z', 'x', 'c' ,'v', 'b', 'n', 'm', ',', '.', '/', 0,    0,   0,  ' ', // 0x2B
+};
+
+const char ps2_keycode_map_shifted[0x3a] = {
+  0,    0,   '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b', //0x0
+  '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n', // 0xF
+  0,    'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', 0,   0, // 0x1D
+  '\\', 'Z', 'X', 'C' ,'V', 'B', 'N', 'M', '<', '>', '?', 0,    0,   0,  ' ', // 0x2B
+};
+
 } // namespace
 
 void InitializeKeyboard() {
@@ -65,4 +82,53 @@ void InitializeKeyboard() {
       msg.arg.keyboard.press = press;
       task_manager->SendMessage(1, msg);
     };
+}
+
+void InitializePS2Keyboard() {
+  //while ((IoIn32(0x64) & 0x02) == 0);
+  for (int i = 0; i < 0b10000000; i++);
+  IoOut32(0x64, 0x60);
+  //while ((IoIn32(0x64) & 0x02) == 0);
+  for (int i = 0; i < 0b10000000; i++);
+  IoOut32(0x60, 0x47);
+}
+
+keydbg KeyboardEvent() {
+    Message msg{Message::kKeyPush};
+    uint32_t raw = IoIn32(0x60);
+    uint32_t key = raw & 0x0000'00ff;
+
+    Message msgMouse{Message::kMouseMove};
+    msgMouse.arg.mouse_move.dx = 0;
+    msgMouse.arg.mouse_move.dy = 0;
+
+    switch (key) {
+      case 0x48:
+        msgMouse.arg.mouse_move.dy = -10;
+        break;
+      case 0x4B:
+        msgMouse.arg.mouse_move.dx = -10;
+        break;
+      case 0x50:
+        msgMouse.arg.mouse_move.dy = 10;
+        break;
+      case 0x4D:
+        msgMouse.arg.mouse_move.dx = 10;
+        break;
+    }
+
+    msg.arg.keyboard.ascii = 0;
+    msg.arg.keyboard.press = 0;
+
+    if (0x0 <= key && key <= 0x39) { // not shifted, make
+        msg.arg.keyboard.ascii = ps2_keycode_map[key];
+        msg.arg.keyboard.press = 1;
+    } else if (0x80 <= key && key <= 0xB9) { // not shifted, break
+        msg.arg.keyboard.ascii = ps2_keycode_map[key-0x80];
+    } 
+
+    msg.arg.keyboard.modifier = 0;
+    msg.arg.keyboard.keycode = key;
+    task_manager->SendMessage(1, msg);
+    return {raw, msg.arg.keyboard.ascii};
 }

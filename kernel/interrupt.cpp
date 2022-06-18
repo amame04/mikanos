@@ -15,6 +15,8 @@
 #include "graphics.hpp"
 #include "font.hpp"
 
+#include "logger.hpp"
+
 std::array<InterruptDescriptor, 256> idt;
 
 void SetIDTEntry(InterruptDescriptor& desc,
@@ -37,6 +39,26 @@ namespace {
   __attribute__((interrupt))
   void IntHandlerXHCI(InterruptFrame* frame) {
     task_manager->SendMessage(1, Message{Message::kInterruptXHCI});
+    NotifyEndOfInterrupt();
+  }
+
+  __attribute__((interrupt))
+  void IntHandlerPS2Keyboard(InterruptFrame* frame) {
+    Log(kError, "PS2InterrupthandlerKeyboard");
+    task_manager->SendMessage(1, Message{Message::kInterruptPS2Keyboard});
+    IoOut32(0x21, 0x61);
+    IoOut32(0x20, 0x20);
+    NotifyEndOfInterrupt();
+  }
+
+  __attribute__((interrupt))
+  void IntHandlerPS2Mouse(InterruptFrame* frame) {
+    Log(kError, "PS2InterrupthandlerMouse");
+    task_manager->SendMessage(1, Message{Message::kInterruptPS2Mouse});
+    IoOut32(0xA1, 0x64);
+    IoOut32(0x21, 0x62);
+    IoOut32(0xA0, 0x20);
+    IoOut32(0x20, 0x20);
     NotifyEndOfInterrupt();
   }
 
@@ -133,7 +155,11 @@ void InitializeInterrupt() {
                 reinterpret_cast<uint64_t>(handler),
                 kKernelCS);
   };
+
+  set_idt_entry(0x21, IntHandlerPS2Keyboard);
+  set_idt_entry(0x2C, IntHandlerPS2Mouse);
   set_idt_entry(InterruptVector::kXHCI, IntHandlerXHCI);
+
   SetIDTEntry(idt[InterruptVector::kLAPICTimer],
               MakeIDTAttr(DescriptorType::kInterruptGate, 0 /* DPL */,
                           true /* present */, kISTForTimer /* IST */),

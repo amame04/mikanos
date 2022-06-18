@@ -19,3 +19,11 @@ static const int kRAltBitMask     = 0b01000000u;
 static const int kRGUIBitMask     = 0b10000000u;
 
 void InitializeKeyboard();
+
+struct keydbg {
+    uint32_t keycode;
+    char ascii;
+};
+
+void InitializePS2Keyboard();
+keydbg KeyboardEvent();

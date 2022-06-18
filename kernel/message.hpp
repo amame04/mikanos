@@ -15,6 +15,8 @@ struct Message {
     kWindowActive,
     kPipe,
     kWindowClose,
+    kInterruptPS2Keyboard,
+    kInterruptPS2Mouse,
   } type;
 
   uint64_t src_task;

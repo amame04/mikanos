@@ -34,3 +34,4 @@ class Mouse {
 };
 
 void InitializeMouse();
+void InitializePS2Mouse();

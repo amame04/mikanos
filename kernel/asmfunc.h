@@ -3,6 +3,8 @@
 #include <stdint.h>
 
 extern "C" {
+  void IoOut8(uint8_t addr, uint8_t data);
+  int IoIn8(uint8_t addr);
   void IoOut32(uint16_t addr, uint32_t data);
   uint32_t IoIn32(uint16_t addr);
   uint16_t GetCS(void);

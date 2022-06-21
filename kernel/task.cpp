@@ -4,6 +4,8 @@
 #include "segment.hpp"
 #include "timer.hpp"
 
+#include "logger.hpp"
+
 namespace {
   template <class T, class U>
   void Erase(T& c, const U& value) {

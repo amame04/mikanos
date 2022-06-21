@@ -206,7 +206,7 @@ extern "C" void KernelMainNewStack(
   InitializeMainWindow();
   InitializeTextWindow();
   layer_manager->Draw({{0, 0}, ScreenSize()});
-  
+
   acpi::Initialize(acpi_table);
   InitializeLAPICTimer();
 
@@ -220,16 +220,20 @@ extern "C" void KernelMainNewStack(
   InitializeTask();
   Task& main_task = task_manager->CurrentTask();
 
+  __asm__("cli");
   InitializePIC();
+  __asm__("sti");
+  Log(kWarn, "pic\n");
   InitializePS2Keyboard();
+  Log(kWarn, "key\n");
   InitializePS2Mouse();
+  Log(kWarn, "mouse\n");
+  EnablePS2interrupt();
+  Log(kWarn, "ps2interrutp\n");
 
-
-  if (usb::xhci::Initialize() != -1) {
-    InitializeKeyboard();
-    InitializeMouse();
-  }
-
+  usb::xhci::Initialize();
+  InitializeKeyboard();
+  InitializeMouse();
 
   app_loads = new std::map<fat::DirectoryEntry*, AppLoadInfo>;
   task_manager->NewTask()
@@ -247,8 +251,10 @@ extern "C" void KernelMainNewStack(
     const auto tick = timer_manager->CurrentTick();
     __asm__("sti");
 
-    //keydbg key = KeyboardEvent();
-    //Log(kDebug, "%c", key.keycode);
+    if ((IoIn32(0x64) & 1) != 0) {
+      keydbg key = KeyboardEvent();
+      Log(kDebug, "%x\n", key.keycode);
+    }
 
     sprintf(str, "%010lu", tick);
     FillRectangle(*main_window->InnerWriter(), {20, 4}, {8 * 10, 16}, {0xc6, 0xc6, 0xc6});

@@ -6,6 +6,7 @@
 
 #include "asmfunc.h"
 #include "logger.hpp"
+#include "layer.hpp"
 
 namespace {
 
@@ -85,35 +86,34 @@ void InitializeKeyboard() {
 }
 
 void InitializePS2Keyboard() {
-  //while ((IoIn32(0x64) & 0x02) == 0);
-  for (int i = 0; i < 0b10000000; i++);
-  IoOut32(0x64, 0x60);
-  //while ((IoIn32(0x64) & 0x02) == 0);
-  for (int i = 0; i < 0b10000000; i++);
-  IoOut32(0x60, 0x47);
+  while ((IoIn32(0x64) & 0x02) != 0);
+  IoOut8(0x64, 0x60);
+  while ((IoIn32(0x64) & 0x02) != 0);
+  IoOut8(0x60, 0x47);
 }
 
 keydbg KeyboardEvent() {
+    auto mouse = layer_manager->Mouse;
     Message msg{Message::kKeyPush};
     uint32_t raw = IoIn32(0x60);
     uint32_t key = raw & 0x0000'00ff;
 
-    Message msgMouse{Message::kMouseMove};
-    msgMouse.arg.mouse_move.dx = 0;
-    msgMouse.arg.mouse_move.dy = 0;
-
-    switch (key) {
+    switch ((raw & 0x0000ff00) >> 8) {
       case 0x48:
-        msgMouse.arg.mouse_move.dy = -10;
+        mouse->OnInterrupt(0, 0, -10);
+        Log(kWarn, "ue\n");
         break;
       case 0x4B:
-        msgMouse.arg.mouse_move.dx = -10;
+        mouse->OnInterrupt(0, -10, 0);
+        Log(kWarn, "hidari\n");
         break;
       case 0x50:
-        msgMouse.arg.mouse_move.dy = 10;
+        mouse->OnInterrupt(0, 0, 10);
+        Log(kWarn, "sita\n");
         break;
       case 0x4D:
-        msgMouse.arg.mouse_move.dx = 10;
+        mouse->OnInterrupt(0, 10, 0);
+        Log(kWarn, "migi\n");
         break;
     }
 

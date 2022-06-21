@@ -38,27 +38,35 @@ void NotifyEndOfInterrupt() {
 namespace {
   __attribute__((interrupt))
   void IntHandlerXHCI(InterruptFrame* frame) {
+    Log(kError, "XHCIInterrupthandler\n");
     task_manager->SendMessage(1, Message{Message::kInterruptXHCI});
     NotifyEndOfInterrupt();
   }
 
   __attribute__((interrupt))
   void IntHandlerPS2Keyboard(InterruptFrame* frame) {
-    Log(kError, "PS2InterrupthandlerKeyboard");
+    Log(kError, "PS2InterrupthandlerKeyboard\n");
     task_manager->SendMessage(1, Message{Message::kInterruptPS2Keyboard});
-    IoOut32(0x21, 0x61);
-    IoOut32(0x20, 0x20);
+    IoOut8(0x21, 0x61);
+    IoOut8(0x20, 0x20);
     NotifyEndOfInterrupt();
   }
 
   __attribute__((interrupt))
   void IntHandlerPS2Mouse(InterruptFrame* frame) {
-    Log(kError, "PS2InterrupthandlerMouse");
+    Log(kError, "PS2InterrupthandlerMouse\n");
     task_manager->SendMessage(1, Message{Message::kInterruptPS2Mouse});
-    IoOut32(0xA1, 0x64);
-    IoOut32(0x21, 0x62);
-    IoOut32(0xA0, 0x20);
-    IoOut32(0x20, 0x20);
+    IoOut8(0xA1, 0x64);
+    IoOut8(0x21, 0x62);
+    IoOut8(0xA0, 0x20);
+    IoOut8(0x20, 0x20);
+    NotifyEndOfInterrupt();
+  }
+
+  __attribute((interrupt))
+  void IntHandler27(InterruptFrame* frame) {
+    Log(kError, "0x27 interrupt\n");
+    IoOut8(0x20, 0x67); /* IRQ-07受付完了をPICに通知 */
     NotifyEndOfInterrupt();
   }
 
@@ -157,14 +165,16 @@ void InitializeInterrupt() {
   };
 
   set_idt_entry(0x21, IntHandlerPS2Keyboard);
-  set_idt_entry(0x2C, IntHandlerPS2Mouse);
+  set_idt_entry(0x2c, IntHandlerPS2Mouse);
   set_idt_entry(InterruptVector::kXHCI, IntHandlerXHCI);
+  set_idt_entry(0x27, IntHandler27);
 
   SetIDTEntry(idt[InterruptVector::kLAPICTimer],
               MakeIDTAttr(DescriptorType::kInterruptGate, 0 /* DPL */,
                           true /* present */, kISTForTimer /* IST */),
               reinterpret_cast<uint64_t>(IntHandlerLAPICTimer),
               kKernelCS);
+
   set_idt_entry(0,  IntHandlerDE);
   set_idt_entry(1,  IntHandlerDB);
   set_idt_entry(3,  IntHandlerBP);

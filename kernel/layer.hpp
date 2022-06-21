@@ -13,6 +13,7 @@
 #include "graphics.hpp"
 #include "window.hpp"
 #include "message.hpp"
+#include "mouse.hpp"
 
 /** @brief Layer は 1 つの層を表す。
  *
@@ -93,6 +94,7 @@ class LayerManager {
   Layer* FindLayer(unsigned int id);
   /** @brief 指定されたレイヤーの現在の高さを返す。 */
   int GetHeight(unsigned int id);
+  std::shared_ptr<Mouse> Mouse;
 
  private:
   FrameBuffer* screen_{nullptr};

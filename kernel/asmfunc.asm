@@ -6,6 +6,20 @@
 bits 64
 section .text
 
+global IoOut8   ; void IoOut8(uint8_t addr, uint8_t data);
+IoOut8:
+    mov edx,[esp+4]  ; addr
+    mov al,[esp+8]   ; data
+    out dx,al
+    ret
+
+global IoIn8   ; uint8_t IoIn8(uint8_t addr);
+IoIn8:
+    mov edx,[esp+4]  ; addr
+    mov eax,0
+    in  al,dx
+    ret
+
 global IoOut32  ; void IoOut32(uint16_t addr, uint32_t data);
 IoOut32:
     mov dx, di    ; dx = addr

@@ -92,43 +92,104 @@ void InitializePS2Keyboard() {
   IoOut8(0x60, 0x47);
 }
 
-keydbg KeyboardEvent() {
-    auto mouse = layer_manager->Mouse;
+void KeyboardEvent() {
+    static auto mouse = layer_manager->Mouse;
+    static int mouse_button = 0;
+    static int modif = 0b00;
     Message msg{Message::kKeyPush};
     uint32_t raw = IoIn32(0x60);
     uint32_t key = raw & 0x0000'00ff;
 
-    switch ((raw & 0x0000ff00) >> 8) {
-      case 0x48:
-        mouse->OnInterrupt(0, 0, -10);
-        Log(kWarn, "ue\n");
-        break;
-      case 0x4B:
-        mouse->OnInterrupt(0, -10, 0);
-        Log(kWarn, "hidari\n");
-        break;
-      case 0x50:
-        mouse->OnInterrupt(0, 0, 10);
-        Log(kWarn, "sita\n");
-        break;
-      case 0x4D:
-        mouse->OnInterrupt(0, 10, 0);
-        Log(kWarn, "migi\n");
-        break;
-    }
+    Log(kDebug, "%x\n", raw);
 
     msg.arg.keyboard.ascii = 0;
-    msg.arg.keyboard.press = 0;
+    msg.arg.keyboard.press = 1;
+    msg.arg.keyboard.keycode = 0;
 
-    if (0x0 <= key && key <= 0x39) { // not shifted, make
-        msg.arg.keyboard.ascii = ps2_keycode_map[key];
-        msg.arg.keyboard.press = 1;
-    } else if (0x80 <= key && key <= 0xB9) { // not shifted, break
-        msg.arg.keyboard.ascii = ps2_keycode_map[key-0x80];
+    switch (key) {
+      case 0x1d: // left ctrl make
+        modif = modif | 0b01;
+        break;
+      case 0x9d: // left ctrl break
+        modif = modif & 0b10;
+        msg.arg.keyboard.press = 0;
+        break;
+      case 0x2a: // left shift make
+        modif = modif | 0b10;
+        break;
+      case 0xaa: // left shift break
+        modif = modif & 0b01;
+        msg.arg.keyboard.press = 0;
+        break;
+    }
+    msg.arg.keyboard.modifier = modif;
+
+    int dx = 0;
+    int dy = 0;
+    if (modif & 1) {
+      switch ((raw & 0x0000ff00) >> 8) {
+        case 0x48:
+          dy = -10;
+          Log(kDebug, "Top\n");
+          break;
+        case 0x4B:
+          dx = -10;
+          Log(kDebug, "Left\n");
+          break;
+        case 0x50:
+          dy = 10;
+          Log(kDebug, "Buttom\n");
+          break;
+        case 0x4D:
+          dx = 10;
+          Log(kDebug, "Right\n");
+          break;
+      }
+      switch (key) {
+        case 0x10:
+          msg.arg.keyboard.ascii = 'q';
+          msg.arg.keyboard.keycode = 0x14;
+          __asm__("cli");
+          task_manager->SendMessage(1, msg);
+          __asm__("sti");
+
+          return;
+        case 0x20:
+          msg.arg.keyboard.ascii = 'd';
+          msg.arg.keyboard.keycode = 0x07;
+          __asm__("cli");
+          task_manager->SendMessage(1, msg);
+          __asm__("sti");
+
+          return;
+        case 0x1C:
+          mouse_button = 1;
+          break;
+        case 0x9C:
+          mouse_button = 0;
+          break;
+      }
+      mouse->OnInterrupt(mouse_button, dx, dy);
+      return;
+    }
+
+    if (0x0 <= key && key <= 0x39) { // make
+        if (modif & 0b10) {
+          msg.arg.keyboard.ascii = ps2_keycode_map_shifted[key];
+        } else {
+          msg.arg.keyboard.ascii = ps2_keycode_map[key];
+        }
+    } else if (0x80 <= key && key <= 0xB9) { // break
+        if (modif & 0b10) {
+          msg.arg.keyboard.ascii = ps2_keycode_map_shifted[key - 0x80];
+        } else {
+          msg.arg.keyboard.ascii = ps2_keycode_map[key - 0x80];
+        }
+        msg.arg.keyboard.press = 0;
     } 
 
-    msg.arg.keyboard.modifier = 0;
-    msg.arg.keyboard.keycode = key;
+    __asm__("cli");
     task_manager->SendMessage(1, msg);
-    return {raw, msg.arg.keyboard.ascii};
+    __asm__("sti");
+    return;
 }

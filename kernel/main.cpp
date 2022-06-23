@@ -178,6 +178,28 @@ void TaskWallclock(uint64_t task_id, int64_t data) {
   }
 }
 
+void TaskPS2Keyboard(uint64_t task_id, int64_t data) {
+  Task& task = task_manager->CurrentTask();
+  timer_manager->AddTimer(
+      Timer{timer_manager->CurrentTick(), 1, task_id});
+  while (true) {
+    __asm__("cli");
+    auto msg = task.ReceiveMessage();
+    if (!msg) {
+      task.Sleep();
+      __asm__("sti");
+      continue;
+    }
+    __asm__("sti");
+
+    if (msg->type == Message::kTimerTimeout) {
+      if ((IoIn32(0x64) & 1) != 0) KeyboardEvent();
+      timer_manager->AddTimer(
+          Timer{msg->arg.timer.timeout + 1, 1, task_id});
+    }
+  }
+}
+
 extern "C" void KernelMainNewStack(
     const FrameBufferConfig& frame_buffer_config_ref,
     const MemoryMap& memory_map_ref,
@@ -220,16 +242,17 @@ extern "C" void KernelMainNewStack(
   InitializeTask();
   Task& main_task = task_manager->CurrentTask();
 
+  // 割り込みが上手くいっていないので以下の初期化は実質無意味
   __asm__("cli");
   InitializePIC();
   __asm__("sti");
-  Log(kWarn, "pic\n");
+  Log(kDebug, "pic\n");
   InitializePS2Keyboard();
-  Log(kWarn, "key\n");
+  Log(kDebug, "key\n");
   InitializePS2Mouse();
-  Log(kWarn, "mouse\n");
+  Log(kDebug, "mouse\n");
   EnablePS2interrupt();
-  Log(kWarn, "ps2interrutp\n");
+  Log(kDebug, "ps2interrutp\n");
 
   usb::xhci::Initialize();
   InitializeKeyboard();
@@ -243,6 +266,10 @@ extern "C" void KernelMainNewStack(
   task_manager->NewTask()
     .InitContext(TaskWallclock, 0)
     .Wakeup();
+  
+  task_manager->NewTask()
+    .InitContext(TaskPS2Keyboard, 0)
+    .Wakeup();
 
   char str[128];
 
@@ -250,11 +277,6 @@ extern "C" void KernelMainNewStack(
     __asm__("cli");
     const auto tick = timer_manager->CurrentTick();
     __asm__("sti");
-
-    if ((IoIn32(0x64) & 1) != 0) {
-      keydbg key = KeyboardEvent();
-      Log(kDebug, "%x\n", key.keycode);
-    }
 
     sprintf(str, "%010lu", tick);
     FillRectangle(*main_window->InnerWriter(), {20, 4}, {8 * 10, 16}, {0xc6, 0xc6, 0xc6});
@@ -277,12 +299,7 @@ extern "C" void KernelMainNewStack(
       break;
     case Message::kInterruptPS2Keyboard:
       printk("InterruptPS2\n");
-      {
-        keydbg key = KeyboardEvent();
-        if (key.keycode) {
-          printk("%c, %x\n", key.ascii, key.keycode);
-        }
-      }
+      KeyboardEvent();
       break;
     case Message::kTimerTimeout:
       if (msg->arg.timer.value == kTextboxCursorTimer) {
@@ -300,9 +317,8 @@ extern "C" void KernelMainNewStack(
         if (msg->arg.keyboard.press) {
           InputTextWindow(msg->arg.keyboard.ascii);
         }
-      } else if ((msg->arg.keyboard.press &&
-                 msg->arg.keyboard.keycode == 59) /* F2 */ ||
-                 msg->arg.keyboard.keycode == 0x3C) {
+      } else if (msg->arg.keyboard.press &&
+                 msg->arg.keyboard.keycode == 59) /* F2 */ {
         task_manager->NewTask()
           .InitContext(TaskTerminal, 0)
           .Wakeup();
@@ -315,7 +331,7 @@ extern "C" void KernelMainNewStack(
           task_manager->SendMessage(task_it->second, *msg);
           __asm__("sti");
         } else {
-          printk("key push not handled: keycode %02x, ascii %02x\n",
+          Log(kWarn, "key push not handled: keycode %02x, ascii %02x\n",
               msg->arg.keyboard.keycode,
               msg->arg.keyboard.ascii);
         }

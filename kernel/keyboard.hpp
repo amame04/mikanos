@@ -26,4 +26,4 @@ struct keydbg {
 };
 
 void InitializePS2Keyboard();
-keydbg KeyboardEvent();
+void KeyboardEvent();

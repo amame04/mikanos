@@ -38,14 +38,14 @@ void NotifyEndOfInterrupt() {
 namespace {
   __attribute__((interrupt))
   void IntHandlerXHCI(InterruptFrame* frame) {
-    Log(kError, "XHCIInterrupthandler\n");
+    Log(kDebug, "XHCIInterrupthandler\n");
     task_manager->SendMessage(1, Message{Message::kInterruptXHCI});
     NotifyEndOfInterrupt();
   }
 
   __attribute__((interrupt))
   void IntHandlerPS2Keyboard(InterruptFrame* frame) {
-    Log(kError, "PS2InterrupthandlerKeyboard\n");
+    Log(kDebug, "PS2InterrupthandlerKeyboard\n");
     task_manager->SendMessage(1, Message{Message::kInterruptPS2Keyboard});
     IoOut8(0x21, 0x61);
     IoOut8(0x20, 0x20);
@@ -54,7 +54,7 @@ namespace {
 
   __attribute__((interrupt))
   void IntHandlerPS2Mouse(InterruptFrame* frame) {
-    Log(kError, "PS2InterrupthandlerMouse\n");
+    Log(kDebug, "PS2InterrupthandlerMouse\n");
     task_manager->SendMessage(1, Message{Message::kInterruptPS2Mouse});
     IoOut8(0xA1, 0x64);
     IoOut8(0x21, 0x62);
@@ -65,7 +65,7 @@ namespace {
 
   __attribute((interrupt))
   void IntHandler27(InterruptFrame* frame) {
-    Log(kError, "0x27 interrupt\n");
+    Log(kDebug, "0x27 interrupt\n");
     IoOut8(0x20, 0x67); /* IRQ-07受付完了をPICに通知 */
     NotifyEndOfInterrupt();
   }

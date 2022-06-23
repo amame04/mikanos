@@ -96,9 +96,14 @@ void KeyboardEvent() {
     static auto mouse = layer_manager->Mouse;
     static int mouse_button = 0;
     static int modif = 0b00;
+
     Message msg{Message::kKeyPush};
     uint32_t raw = IoIn32(0x60);
+
     uint32_t key = raw & 0x0000'00ff;
+    if (key == 0xE0) {
+      key = (raw & 0x0000'ff00) >> 8;
+    }
 
     Log(kDebug, "%x\n", raw);
 
@@ -121,13 +126,15 @@ void KeyboardEvent() {
         modif = modif & 0b01;
         msg.arg.keyboard.press = 0;
         break;
+      case 0x3c: // F2 make
+        msg.arg.keyboard.keycode = 0x3b;
     }
     msg.arg.keyboard.modifier = modif;
 
     int dx = 0;
     int dy = 0;
     if (modif & 1) {
-      switch ((raw & 0x0000ff00) >> 8) {
+      switch (key) {
         case 0x48:
           dy = -10;
           Log(kDebug, "Top\n");
@@ -144,8 +151,6 @@ void KeyboardEvent() {
           dx = 10;
           Log(kDebug, "Right\n");
           break;
-      }
-      switch (key) {
         case 0x10:
           msg.arg.keyboard.ascii = 'q';
           msg.arg.keyboard.keycode = 0x14;

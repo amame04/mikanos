@@ -212,7 +212,7 @@ extern "C" void KernelMainNewStack(
   InitializeConsole();
 
   printk("Welcome to MikanOS!\n");
-  SetLogLevel(kDebug);
+  SetLogLevel(kError);
 
   InitializeSegmentation();
   InitializePaging();
@@ -242,7 +242,8 @@ extern "C" void KernelMainNewStack(
   InitializeTask();
   Task& main_task = task_manager->CurrentTask();
 
-  // 割り込みが上手くいっていないので以下の初期化は実質無意味
+  // 割り込みが上手くいかないので以下の初期化は実質無意味
+  /*
   __asm__("cli");
   InitializePIC();
   __asm__("sti");
@@ -253,6 +254,7 @@ extern "C" void KernelMainNewStack(
   Log(kDebug, "mouse\n");
   EnablePS2interrupt();
   Log(kDebug, "ps2interrutp\n");
+  */
 
   usb::xhci::Initialize();
   InitializeKeyboard();

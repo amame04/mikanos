@@ -128,6 +128,18 @@ void KeyboardEvent() {
         break;
       case 0x3c: // F2 make
         msg.arg.keyboard.keycode = 0x3b;
+      case 0x48: // UpArrow
+        msg.arg.keyboard.keycode = 0x52;
+        break;
+      case 0x4B: // Left Arrow
+        msg.arg.keyboard.keycode = 0x50;
+        break;
+      case 0x50: // DownArrow
+        msg.arg.keyboard.keycode = 0x51;
+        break;
+      case 0x4D: // Right Arrow
+        msg.arg.keyboard.keycode = 0x4f;
+        break;
     }
     msg.arg.keyboard.modifier = modif;
 

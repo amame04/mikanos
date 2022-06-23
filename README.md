@@ -2,7 +2,10 @@
 [uchan-nos/mikanos](https://github.com/uchan-nos/mikanos)のForkです。
 
 # 追加・変更点
-PS/2マウスとキーボードに対応中です。
+- PS/2キーボードにポーリング方式で対応
+- PS/2キーボードでのマウス操作に対応
+    - ctrl + 矢印キー: カーソル移動
+    - ctrl + Enter   : クリック
 
 # MikanOS
 
